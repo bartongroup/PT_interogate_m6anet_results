@@ -67,24 +67,51 @@ After running the `interogate_m6anet.py` script, you need to run `scripts/collec
 
 python scripts/collect_positions_of_m6a.py  --file <infile> --output <name>
 
+--file output/data.site_proba_exon_annotated.tab
 ```
+
+The input file is the ouput  `data.site_proba_exon_annotated.tab` from  `interogate_m6anet.py` script 
 
 What This Script Does:
 
 -   Extracts positions of m6A modifications from the processed data.
 -   Summarizes the positions, providing a detailed list of all identified modification sites.
 
+If you would like to collect all the position from one condtion (i.e. all the rep), then you can use a wild card to collect these
+
+```bash
+
+python scripts/collect_positions_of_m6a.py  --file WT_*/data.site_proba_exon_annotated.tab --output WT.results
+
+python scripts/collect_positions_of_m6a.py  --file MUT_*/data.site_proba_exon_annotated.tab --output MUT.results
+```
+
 3) Compare Positions Between Conditions
 
 With the output from the previous script, run `scripts/compare_positions_between_conditions.py` to compare the positions of m6A modifications between different experimental conditions.
 
+# Compare the results between conditions. 
 
 ```bash
 
 python scripts/compare_positions_between_conditions.py --file <infile> --output <name>
 
 ```
+
+an example based on the outfiles from above:
+
+```bash
+
+python scripts/compare_positions_between_conditions.py --file WT.results MUT.results --output WT_vs_MUT
+
+```
+
 What This Script Does:
 
 - Compares the collected m6A modification positions between different experimental conditions.
 - Highlights the differences and similarities in m6A modification sites between the specified conditions.
+
+Note: the WT.results and MUT.results are a collection of all the data from all the reps. 
+
+You can even collect all different permutations of your data as you see fit. Enjoy!! :) 
+
