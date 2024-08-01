@@ -46,3 +46,45 @@ python interogate_m6anet.py
 
 ```
 
+### example usage 
+
+```bash
+
+python interogate_m6anet.py 
+ --gtf Araprot.11.gtf --m6a */data.site_proba.csv --logfile m6anet_interogator.logfile
+
+```
+   The interogate_m6anet.py script processes the initial m6A modification data obtained from m6Anet.
+
+## Additional Processing Scripts
+
+
+ 2) Collect Positions of m6A
+
+After running the `interogate_m6anet.py` script, you need to run `scripts/collect_positions_of_m6a.py`. This script collects and summarizes the positions of m6A modifications identified in the data.
+
+```bash
+
+python scripts/collect_positions_of_m6a.py  --file <infile> --output <name>
+
+```
+
+What This Script Does:
+
+-   Extracts positions of m6A modifications from the processed data.
+-   Summarizes the positions, providing a detailed list of all identified modification sites.
+
+3) Compare Positions Between Conditions
+
+With the output from the previous script, run `scripts/compare_positions_between_conditions.py` to compare the positions of m6A modifications between different experimental conditions.
+
+
+```bash
+
+python scripts/compare_positions_between_conditions.py --file <infile> --output <name>
+
+```
+What This Script Does:
+
+- Compares the collected m6A modification positions between different experimental conditions.
+- Highlights the differences and similarities in m6A modification sites between the specified conditions.

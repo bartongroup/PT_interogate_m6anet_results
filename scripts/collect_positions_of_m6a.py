@@ -70,7 +70,8 @@ def main():
     
     with open(output_file, 'w', newline='') as out_file:
         writer = csv.writer(out_file, delimiter='\t')
-        writer.writerow(['transcript_id', 'exon_number', 'positions', 'num_positions', 'num_unique_positions', 'summary'])
+        writer.writerow(['transcript_id', 'exon_number', 'positions', 'num_positions', 
+                         'num_unique_positions', 'summary'])
         
         for transcript_id, exons in all_data.items():
             for exon_number, positions in exons.items():
