@@ -81,9 +81,12 @@ If you would like to collect all the position from one condtion (i.e. all the re
 
 ```bash
 
-python scripts/collect_positions_of_m6a.py  --file WT_*/data.site_proba_exon_annotated.tab --output WT.results
+python scripts/collect_positions_of_m6a.py  --file WT_*/data.site_proba_exon_annotated.tab 
+--output WT.results
 
-python scripts/collect_positions_of_m6a.py  --file MUT_*/data.site_proba_exon_annotated.tab --output MUT.results
+python scripts/collect_positions_of_m6a.py  --file MUT_*/data.site_proba_exon_annotated.tab 
+--output MUT.results
+
 ```
 
 3) Compare Positions Between Conditions
@@ -102,7 +105,8 @@ an example based on the outfiles from above:
 
 ```bash
 
-python scripts/compare_positions_between_conditions.py --file WT.results MUT.results --output WT_vs_MUT
+python scripts/compare_positions_between_conditions.py --file WT.results MUT.results 
+--output WT_vs_MUT
 
 ```
 
@@ -110,6 +114,15 @@ What This Script Does:
 
 - Compares the collected m6A modification positions between different experimental conditions.
 - Highlights the differences and similarities in m6A modification sites between the specified conditions.
+
+## test for this script 
+
+```bash
+
+python scripts/compare_positions_between_conditions.py --file tests/test1.sites.summerise 
+tests/test2.sites.summerise
+
+```
 
 Note: the WT.results and MUT.results are a collection of all the data from all the reps. 
 
