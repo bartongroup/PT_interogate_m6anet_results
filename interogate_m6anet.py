@@ -181,7 +181,7 @@ def main():
                         'is_last_exon': False,
                         'is_5prime_UTR': True  # New field indicating 5' UTR
                         }
-                        print("{transcript_id}\thas 5_prime m6a modification at\t{position}")
+                        print(f"{transcript_id}\thas 5_prime m6a modification at\t{position}")
 
 
                 is_last_exon = (exon_number == last_exon_for_transcript.get(transcript_id, None))
