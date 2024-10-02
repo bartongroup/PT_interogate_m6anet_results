@@ -164,6 +164,26 @@ def main():
                 transcript_id = row['transcript_id']
                 position = row['transcript_position']
                 exon_number, total_exons = query_transcript_exon(transcript_dict, transcript_id, position)
+                # determine if this is a 5prime UTR modification
+                exons = transcript_dict.get(transcript_id, {})
+    
+                if exons:
+                    first_exon_start = min(exons[1]) if 1 in exons else None
+
+                    # Check if the position is in the 5' UTR
+                    if first_exon_start and position < first_exon_start:
+                        result = {
+                        'transcript_id': transcript_id,
+                        'position': position,
+                        'exon_number': '5\' UTR',
+                        'total_exons_in_transcript': len(exons),
+                        'total_exons_in_gene': gene_exon_counts.get(transcript_id.split('.')[0], 'Unknown'),
+                        'is_last_exon': False,
+                        'is_5prime_UTR': True  # New field indicating 5' UTR
+                        }
+                        print("{transcript_id}\thas 5_prime m6a modification at\t{position}")
+
+
                 is_last_exon = (exon_number == last_exon_for_transcript.get(transcript_id, None))
                 if exon_number is not None:
                     result = {
