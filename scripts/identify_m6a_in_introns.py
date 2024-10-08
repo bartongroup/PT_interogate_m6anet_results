@@ -195,7 +195,7 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     None
     """
     total_retained_introns = len(filtered_main['isoform'].unique())
-
+    
     # Calculate initial matches (both significant and non-significant)
     initial_matches = len(set(filtered_main['isoform']).intersection(
                           set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
@@ -209,17 +209,28 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     perc_passing_modifications = (retained_introns_with_modification / initial_matches) * 100 if initial_matches > 0 else 0
     perc_failing_modifications = (retained_introns_without_modification / initial_matches) * 100 if initial_matches > 0 else 0
 
+    # Logging
+    logger.info(f"Initial retained introns in m6anet: {initial_matches}, with {retained_introns_with_modification} passing "
+                f"the modification threshold and {retained_introns_without_modification} failing it.")
+    
     # Write summary to output file
     output_file.write(f"Total transcripts with retained introns:\t{total_retained_introns}\n")
     output_file.write(f"Initial total retained introns matched in m6anet:\t{initial_matches}\n")
     output_file.write(f"Total retained introns passing modification threshold:\t{retained_introns_with_modification}\n")
-    output_file.write(f"Total retained introns failing modification threshold:\t{retained_introns_without_modification}\n")
+    output_file.write(f"Total retained introns failing modification threshold (subset of matches):\t{retained_introns_without_modification}\n")
     output_file.write(f"Percentage of retained introns identified in m6anet:\t{perc_retained_in_m6anet:.2f}%\n")
     output_file.write(f"Percentage of reads passing modification threshold:\t{perc_passing_modifications:.2f}%\n")
     output_file.write(f"Percentage of reads failing modification threshold:\t{perc_failing_modifications:.2f}%\n")
     
+    # Additional debugging details
+    output_file.write("\n### Debugging Details ###\n")
+    output_file.write(f"Retained introns matched: {initial_matches}\n")
+    output_file.write(f"Retained introns passing threshold: {retained_introns_with_modification}\n")
+    output_file.write(f"Retained introns failing threshold: {retained_introns_without_modification}\n")
+    output_file.write(f"Percentage passing threshold: {perc_passing_modifications:.2f}%\n")
+    output_file.write(f"Percentage failing threshold: {perc_failing_modifications:.2f}%\n")
+    
     logger.info("Summary statistics written to the output file.")
-
 
 
 def perform_enrichment_analysis(filtered_main, indiv_filtered):
