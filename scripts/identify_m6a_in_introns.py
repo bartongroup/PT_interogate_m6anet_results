@@ -81,35 +81,59 @@ def filter_m6anet_files(m6anet_dir, mapped_data, match_criteria="original"):
             if os.path.exists(indiv_path):
                 indiv_df = pd.read_csv(indiv_path)
                 
+                # Identify missing columns before proceeding
+                required_cols = ['read_index', 'probability_modified']
+                if 'transcript_id' in indiv_df.columns:
+                    required_cols.append('transcript_id')
+                missing_cols = [col for col in required_cols if col not in indiv_df.columns]
+                
+                if missing_cols:
+                    logger.warning(f"Skipping file {indiv_path} due to missing columns: {missing_cols}")
+                    continue
+
                 # Split data into significant and non-significant based on threshold
                 indiv_significant = indiv_df[indiv_df['probability_modified'] < INDIV_THRESHOLD]
                 indiv_non_significant = indiv_df[indiv_df['probability_modified'] >= INDIV_THRESHOLD]
 
+                # Log the current matching attempt
+                logger.info(f"Attempting merge for {subdir} with criteria {match_criteria}")
+                logger.info(f"Columns in mapped_data: {mapped_data.columns}")
+                logger.info(f"Columns in indiv_significant: {indiv_significant.columns}")
+
                 # Apply the matching criteria
-                if match_criteria == "strict":
-                    orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'transcript_id'], how='inner')
-                    orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'transcript_id'], how='inner')
-                elif match_criteria == "gene_strict":
-                    orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'associated_gene'], how='inner')
-                    orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'associated_gene'], how='inner')
-                else:  # "original" criteria
-                    orig_sig = mapped_data.merge(indiv_significant, on='read_index', how='inner')
-                    orig_non_sig = mapped_data.merge(indiv_non_significant, on='read_index', how='inner')
+                try:
+                    if match_criteria == "strict" and 'transcript_id' in mapped_data.columns:
+                        orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'transcript_id'], how='inner')
+                        orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'transcript_id'], how='inner')
+                    elif match_criteria == "gene_strict" and 'associated_gene' in mapped_data.columns:
+                        orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'associated_gene'], how='inner')
+                        orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'associated_gene'], how='inner')
+                    elif match_criteria == "original":
+                        orig_sig = mapped_data.merge(indiv_significant, on='read_index', how='inner')
+                        orig_non_sig = mapped_data.merge(indiv_non_significant, on='read_index', how='inner')
+                        if 'transcript_id' in orig_sig.columns:
+                            orig_sig = orig_sig[
+                                (orig_sig['associated_transcript'] == orig_sig['transcript_id']) |
+                                ((orig_sig['associated_transcript'] == "novel") & 
+                                 (orig_sig['associated_gene'] == orig_sig['transcript_id'].str.split('.').str[0]))
+                            ]
+                            orig_non_sig = orig_non_sig[
+                                (orig_non_sig['associated_transcript'] == orig_non_sig['transcript_id']) |
+                                ((orig_non_sig['associated_transcript'] == "novel") & 
+                                 (orig_non_sig['associated_gene'] == orig_non_sig['transcript_id'].str.split('.').str[0]))
+                            ]
+                    else:
+                        logger.warning(f"No valid columns for the chosen matching criteria in {subdir}. Skipping this merge.")
+                        continue
 
-                    orig_sig = orig_sig[
-                        (orig_sig['associated_transcript'] == orig_sig['transcript_id']) |
-                        ((orig_sig['associated_transcript'] == "novel") & 
-                         (orig_sig['associated_gene'] == orig_sig['transcript_id'].str.split('.').str[0]))
-                    ]
-                    orig_non_sig = orig_non_sig[
-                        (orig_non_sig['associated_transcript'] == orig_non_sig['transcript_id']) |
-                        ((orig_non_sig['associated_transcript'] == "novel") & 
-                         (orig_non_sig['associated_gene'] == orig_non_sig['transcript_id'].str.split('.').str[0]))
-                    ]
+                except KeyError as e:
+                    logger.error(f"Merge failed for {subdir}. Missing key in merge columns: {e}")
+                    continue
 
+                # Check if non-significant data is retained and update total count
                 if not orig_non_sig.empty:
                     logger.info(f"Non-significant data retained for {subdir} - {orig_non_sig.shape[0]} rows")
-                    total_non_sig_rows += orig_non_sig.shape[0]  # Add to the total count
+                    total_non_sig_rows += orig_non_sig.shape[0]
                 else:
                     logger.warning(f"No non-significant data found for {subdir}")
 
@@ -120,10 +144,11 @@ def filter_m6anet_files(m6anet_dir, mapped_data, match_criteria="original"):
     logger.info(f"Total non-significant rows across all files: {total_non_sig_rows}")
 
     # Combine all filtered data for each output
-    combined_significant = pd.concat(all_indiv_significant, ignore_index=True)
-    combined_non_significant = pd.concat(all_indiv_non_significant, ignore_index=True)
+    combined_significant = pd.concat(all_indiv_significant, ignore_index=True) if all_indiv_significant else pd.DataFrame()
+    combined_non_significant = pd.concat(all_indiv_non_significant, ignore_index=True) if all_indiv_non_significant else pd.DataFrame()
 
     return combined_significant, combined_non_significant
+
 
 
 
