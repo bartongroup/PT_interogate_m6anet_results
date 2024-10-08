@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 import argparse
@@ -195,32 +196,27 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     None
     """
     total_retained_introns = len(filtered_main['isoform'].unique())
-    
+
     # Calculate initial matches (both significant and non-significant)
-    initial_matches = len(set(filtered_main['isoform']).intersection(
-                          set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
+    initial_matches = len(set(filtered_main['isoform']).intersection(set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
 
     # Separate significant and non-significant counts
     retained_introns_with_modification = len(indiv_significant['isoform'].unique())
     retained_introns_without_modification = len(indiv_non_significant['isoform'].unique())
 
-    # Calculate percentages relative to initial_matches
+    # Calculate percentages for total matched introns
     perc_retained_in_m6anet = (initial_matches / total_retained_introns) * 100 if total_retained_introns > 0 else 0
+    
+    # Calculate percentages for passing and failing thresholds relative to initial matches
     perc_passing_modifications = (retained_introns_with_modification / initial_matches) * 100 if initial_matches > 0 else 0
     perc_failing_modifications = (retained_introns_without_modification / initial_matches) * 100 if initial_matches > 0 else 0
 
-    # Logging
-    logger.info(f"Initial retained introns in m6anet: {initial_matches}, with {retained_introns_with_modification} passing "
-                f"the modification threshold and {retained_introns_without_modification} failing it.")
-    
     # Write summary to output file
     output_file.write(f"Total transcripts with retained introns:\t{total_retained_introns}\n")
     output_file.write(f"Initial total retained introns matched in m6anet:\t{initial_matches}\n")
     output_file.write(f"Total retained introns passing modification threshold:\t{retained_introns_with_modification}\n")
     output_file.write(f"Total retained introns failing modification threshold (subset of matches):\t{retained_introns_without_modification}\n")
     output_file.write(f"Percentage of retained introns identified in m6anet:\t{perc_retained_in_m6anet:.2f}%\n")
-    output_file.write(f"Percentage of reads passing modification threshold:\t{perc_passing_modifications:.2f}%\n")
-    output_file.write(f"Percentage of reads failing modification threshold:\t{perc_failing_modifications:.2f}%\n")
     
     # Additional debugging details
     output_file.write("\n### Debugging Details ###\n")
@@ -228,9 +224,22 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     output_file.write(f"Retained introns passing threshold: {retained_introns_with_modification}\n")
     output_file.write(f"Retained introns failing threshold: {retained_introns_without_modification}\n")
     output_file.write(f"Percentage passing threshold: {perc_passing_modifications:.2f}%\n")
-    output_file.write(f"Percentage failing threshold: {perc_failing_modifications:.2f}%\n")
+    output_file.write(f"Percentage failing threshold: {perc_failing_modifications:.2f}%\n\n")
     
+    # Log the results for further debugging
+    logger.info(f"Initial matched introns: {initial_matches}")
+    logger.info(f"Introns with modifications: {retained_introns_with_modification}")
+    logger.info(f"Introns without modifications: {retained_introns_without_modification}")
+    logger.info(f"Percentage passing threshold: {perc_passing_modifications:.2f}%")
+    logger.info(f"Percentage failing threshold: {perc_failing_modifications:.2f}%")
+
+    # Additional sanity check: Explicitly log if the percentages don't align
+    if perc_passing_modifications + perc_failing_modifications > 100:
+        logger.warning("Warning: Sum of passing and failing modification percentages exceeds 100%. Check calculations.")
+
     logger.info("Summary statistics written to the output file.")
+
+
 
 
 def perform_enrichment_analysis(filtered_main, indiv_filtered):
