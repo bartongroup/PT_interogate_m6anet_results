@@ -182,6 +182,7 @@ def map_read_id_to_index(filtered_data, index_to_reads_dir):
     return combined_df
 
 
+
 def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_significant, output_file):
     """
     Calculate and write summary statistics for significant and non-significant data to an output file.
@@ -196,49 +197,52 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     None
     """
     total_retained_introns = len(filtered_main['isoform'].unique())
+    logger.info(f"Total transcripts with retained introns: {total_retained_introns}")
+    output_file.write(f"Total transcripts with retained introns:\t{total_retained_introns}\n")
 
     # Calculate initial matches (both significant and non-significant)
-    initial_matches = len(set(filtered_main['isoform']).intersection(set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
+    initial_matches = len(set(filtered_main['isoform']).intersection(
+        set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
+    logger.info(f"Initial total retained introns matched in m6anet: {initial_matches}")
+    output_file.write(f"Initial total retained introns matched in m6anet:\t{initial_matches}\n")
 
     # Separate significant and non-significant counts
     retained_introns_with_modification = len(indiv_significant['isoform'].unique())
     retained_introns_without_modification = len(indiv_non_significant['isoform'].unique())
+    logger.info(f"Total retained introns passing modification threshold: {retained_introns_with_modification}")
+    logger.info(f"Total retained introns failing modification threshold: {retained_introns_without_modification}")
+    output_file.write(f"Total retained introns passing modification threshold:\t{retained_introns_with_modification}\n")
+    output_file.write(f"Total retained introns failing modification threshold (subset of matches):\t{retained_introns_without_modification}\n")
 
-    # Calculate percentages for total matched introns
+    # Calculate percentages
     perc_retained_in_m6anet = (initial_matches / total_retained_introns) * 100 if total_retained_introns > 0 else 0
-    
-    # Calculate percentages for passing and failing thresholds relative to initial matches
     perc_passing_modifications = (retained_introns_with_modification / initial_matches) * 100 if initial_matches > 0 else 0
     perc_failing_modifications = (retained_introns_without_modification / initial_matches) * 100 if initial_matches > 0 else 0
 
     # Write summary to output file
-    output_file.write(f"Total transcripts with retained introns:\t{total_retained_introns}\n")
-    output_file.write(f"Initial total retained introns matched in m6anet:\t{initial_matches}\n")
-    output_file.write(f"Total retained introns passing modification threshold:\t{retained_introns_with_modification}\n")
-    output_file.write(f"Total retained introns failing modification threshold (subset of matches):\t{retained_introns_without_modification}\n")
     output_file.write(f"Percentage of retained introns identified in m6anet:\t{perc_retained_in_m6anet:.2f}%\n")
-    
-    # Additional debugging details
+    output_file.write(f"Percentage of reads passing modification threshold:\t{perc_passing_modifications:.2f}%\n")
+    output_file.write(f"Percentage of reads failing modification threshold:\t{perc_failing_modifications:.2f}%\n")
+
+    logger.info("Summary statistics written to the output file.")
+    logger.info(f"Percentage of retained introns identified in m6anet: {perc_retained_in_m6anet:.2f}%")
+    logger.info(f"Percentage of reads passing modification threshold: {perc_passing_modifications:.2f}%")
+    logger.info(f"Percentage of reads failing modification threshold: {perc_failing_modifications:.2f}%")
+
+    # Log additional details
     output_file.write("\n### Debugging Details ###\n")
     output_file.write(f"Retained introns matched: {initial_matches}\n")
     output_file.write(f"Retained introns passing threshold: {retained_introns_with_modification}\n")
     output_file.write(f"Retained introns failing threshold: {retained_introns_without_modification}\n")
     output_file.write(f"Percentage passing threshold: {perc_passing_modifications:.2f}%\n")
     output_file.write(f"Percentage failing threshold: {perc_failing_modifications:.2f}%\n\n")
-    
-    # Log the results for further debugging
-    logger.info(f"Initial matched introns: {initial_matches}")
-    logger.info(f"Introns with modifications: {retained_introns_with_modification}")
-    logger.info(f"Introns without modifications: {retained_introns_without_modification}")
+
+    logger.info("\n### Debugging Details ###")
+    logger.info(f"Retained introns matched: {initial_matches}")
+    logger.info(f"Retained introns passing threshold: {retained_introns_with_modification}")
+    logger.info(f"Retained introns failing threshold: {retained_introns_without_modification}")
     logger.info(f"Percentage passing threshold: {perc_passing_modifications:.2f}%")
-    logger.info(f"Percentage failing threshold: {perc_failing_modifications:.2f}%")
-
-    # Additional sanity check: Explicitly log if the percentages don't align
-    if perc_passing_modifications + perc_failing_modifications > 100:
-        logger.warning("Warning: Sum of passing and failing modification percentages exceeds 100%. Check calculations.")
-
-    logger.info("Summary statistics written to the output file.")
-
+    logger.info(f"Percentage failing threshold: {perc_failing_modifications:.2f}%\n")
 
 
 
@@ -291,13 +295,13 @@ def main(args):
     gene_strict_sig.to_csv("m6a_retained_intron_data_table_gene_strict_significant.tsv", sep='\t', index=False)
     gene_strict_non_sig.to_csv("m6a_retained_intron_data_table_gene_strict_non_significant.tsv", sep='\t', index=False)
 
+
     # Open a single summary file to log statistics for all filtering levels
     with open("m6a_summary_output.txt", "w") as summary_file:
         
         # Original Output Summary
         summary_file.write("Original Output (gene level match allowed, if trans_ID == novel):\n")
         calculate_summary_stats(filtered_main, original_sig, original_non_sig, summary_file)
-        summary_file.write("\n")
         
         # Perform enrichment analysis on significant data only
         odds_ratio, p_value = perform_enrichment_analysis(filtered_main, original_sig)
@@ -307,7 +311,6 @@ def main(args):
         # Strict Transcript Match Output Summary
         summary_file.write("########\nSTRICT Transcript to transcript_ID Match Output:\n")
         calculate_summary_stats(filtered_main, strict_sig, strict_non_sig, summary_file)
-        summary_file.write("\n")
         
         # Perform enrichment analysis on strict significant data only
         odds_ratio, p_value = perform_enrichment_analysis(filtered_main, strict_sig)
@@ -317,7 +320,6 @@ def main(args):
         # Gene-Level Strict Match Output Summary
         summary_file.write("########\nGene-Level Strict Match Output:\n")
         calculate_summary_stats(filtered_main, gene_strict_sig, gene_strict_non_sig, summary_file)
-        summary_file.write("\n")
         
         # Perform enrichment analysis on gene strict significant data only
         odds_ratio, p_value = perform_enrichment_analysis(filtered_main, gene_strict_sig)
@@ -332,6 +334,8 @@ def main(args):
     logger.info(f"Strict non-significant: {strict_non_sig.shape[0]} rows")
     logger.info(f"Gene-level strict significant: {gene_strict_sig.shape[0]} rows")
     logger.info(f"Gene-level strict non-significant: {gene_strict_non_sig.shape[0]} rows")
+
+
 
 
 # Default paths based on your current directory structure
