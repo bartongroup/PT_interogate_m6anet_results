@@ -80,11 +80,7 @@ def filter_m6anet_files(m6anet_dir, mapped_data, match_criteria="original"):
 
             if os.path.exists(indiv_path):
                 indiv_df = pd.read_csv(indiv_path)
-
-                # Check and rename columns as needed
-                if 'transcript_id' in indiv_df.columns:
-                    indiv_df.rename(columns={'transcript_id': 'associated_transcript'}, inplace=True)
-
+                
                 # Split data into significant and non-significant based on threshold
                 indiv_significant = indiv_df[indiv_df['probability_modified'] < INDIV_THRESHOLD]
                 indiv_non_significant = indiv_df[indiv_df['probability_modified'] >= INDIV_THRESHOLD]
@@ -94,53 +90,51 @@ def filter_m6anet_files(m6anet_dir, mapped_data, match_criteria="original"):
                 logger.info(f"Columns in mapped_data: {mapped_data.columns}")
                 logger.info(f"Columns in indiv_significant: {indiv_significant.columns}")
 
-                # Check for required columns and perform merges accordingly
-                try:
-                    if match_criteria == "strict":
-                        if all(col in mapped_data.columns for col in ['read_index', 'associated_transcript']):
-                            orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'associated_transcript'], how='inner')
-                            orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'associated_transcript'], how='inner')
-                        else:
-                            logger.error(f"Merge failed for {subdir}. Missing required columns for strict match.")
-                            continue
-
-                    elif match_criteria == "gene_strict":
-                        if all(col in mapped_data.columns for col in ['read_index', 'associated_gene']):
-                            orig_sig = mapped_data.merge(indiv_significant, on=['read_index', 'associated_gene'], how='inner')
-                            orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index', 'associated_gene'], how='inner')
-                        else:
-                            logger.error(f"Merge failed for {subdir}. Missing required columns for gene_strict match.")
-                            continue
-
-                    else:  # "original" criteria
-                        orig_sig = mapped_data.merge(indiv_significant, on='read_index', how='inner')
-                        orig_non_sig = mapped_data.merge(indiv_non_significant, on='read_index', how='inner')
-                        
-                        if 'associated_transcript' in orig_sig.columns:
-                            orig_sig = orig_sig[
-                                (orig_sig['associated_transcript'] == orig_sig['associated_transcript']) |
-                                ((orig_sig['associated_transcript'] == "novel") & 
-                                 (orig_sig['associated_gene'] == orig_sig['associated_transcript'].str.split('.').str[0]))
-                            ]
-                            orig_non_sig = orig_non_sig[
-                                (orig_non_sig['associated_transcript'] == orig_non_sig['associated_transcript']) |
-                                ((orig_non_sig['associated_transcript'] == "novel") & 
-                                 (orig_non_sig['associated_gene'] == orig_non_sig['associated_transcript'].str.split('.').str[0]))
-                            ]
-
-                    # Log and accumulate results
-                    if not orig_non_sig.empty:
-                        logger.info(f"Non-significant data retained for {subdir} - {orig_non_sig.shape[0]} rows")
-                        total_non_sig_rows += orig_non_sig.shape[0]
+                # Perform merge based on matching criteria
+                if match_criteria == "strict":
+                    # Strict transcript matching (read_index + transcript_id == associated_transcript)
+                    if 'transcript_id' in indiv_significant.columns:
+                        orig_sig = mapped_data.merge(indiv_significant, left_on=['read_index', 'associated_transcript'],
+                                                     right_on=['read_index', 'transcript_id'], how='inner')
+                        orig_non_sig = mapped_data.merge(indiv_non_significant, left_on=['read_index', 'associated_transcript'],
+                                                         right_on=['read_index', 'transcript_id'], how='inner')
                     else:
-                        logger.warning(f"No non-significant data found for {subdir}")
+                        logger.warning(f"transcript_id column missing in {subdir}, skipping strict merge.")
+                        continue
+                elif match_criteria == "gene_strict":
+                    # Gene strict matching (read_index + associated_gene)
+                    if 'associated_gene' in mapped_data.columns:
+                        orig_sig = mapped_data.merge(indiv_significant, on=['read_index'], how='inner')
+                        orig_sig = orig_sig[orig_sig['associated_gene'] == orig_sig['transcript_id'].str.split('.').str[0]]
+                        
+                        orig_non_sig = mapped_data.merge(indiv_non_significant, on=['read_index'], how='inner')
+                        orig_non_sig = orig_non_sig[orig_non_sig['associated_gene'] == orig_non_sig['transcript_id'].str.split('.').str[0]]
+                    else:
+                        logger.warning(f"associated_gene column missing in mapped data, skipping gene strict merge.")
+                        continue
+                else:  # Original matching (relaxed matching allowing novel IDs)
+                    orig_sig = mapped_data.merge(indiv_significant, on='read_index', how='inner')
+                    orig_sig = orig_sig[
+                        (orig_sig['associated_transcript'] == orig_sig['transcript_id']) |
+                        ((orig_sig['associated_transcript'] == "novel") & 
+                         (orig_sig['associated_gene'] == orig_sig['transcript_id'].str.split('.').str[0]))
+                    ]
+                    orig_non_sig = mapped_data.merge(indiv_non_significant, on='read_index', how='inner')
+                    orig_non_sig = orig_non_sig[
+                        (orig_non_sig['associated_transcript'] == orig_non_sig['transcript_id']) |
+                        ((orig_non_sig['associated_transcript'] == "novel") & 
+                         (orig_non_sig['associated_gene'] == orig_non_sig['transcript_id'].str.split('.').str[0]))
+                    ]
 
-                    all_indiv_significant.append(orig_sig)
-                    all_indiv_non_significant.append(orig_non_sig)
+                # Log and accumulate results
+                if not orig_non_sig.empty:
+                    logger.info(f"Non-significant data retained for {subdir} - {orig_non_sig.shape[0]} rows")
+                    total_non_sig_rows += orig_non_sig.shape[0]  # Add to the total count
+                else:
+                    logger.warning(f"No non-significant data found for {subdir}")
 
-                except KeyError as e:
-                    logger.error(f"Merge failed for {subdir}. Missing key in merge columns: {e}")
-                    continue
+                all_indiv_significant.append(orig_sig)
+                all_indiv_non_significant.append(orig_non_sig)
 
     # Log the cumulative total of non-significant rows across all files
     logger.info(f"Total non-significant rows across all files: {total_non_sig_rows}")
@@ -203,13 +197,14 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     total_retained_introns = len(filtered_main['isoform'].unique())
 
     # Calculate initial matches (both significant and non-significant)
-    initial_matches = len(set(filtered_main['isoform']).intersection(set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
+    initial_matches = len(set(filtered_main['isoform']).intersection(
+                          set(indiv_significant['isoform']).union(set(indiv_non_significant['isoform']))))
 
     # Separate significant and non-significant counts
     retained_introns_with_modification = len(indiv_significant['isoform'].unique())
     retained_introns_without_modification = len(indiv_non_significant['isoform'].unique())
 
-    # Calculate percentages
+    # Calculate percentages relative to initial_matches
     perc_retained_in_m6anet = (initial_matches / total_retained_introns) * 100 if total_retained_introns > 0 else 0
     perc_passing_modifications = (retained_introns_with_modification / initial_matches) * 100 if initial_matches > 0 else 0
     perc_failing_modifications = (retained_introns_without_modification / initial_matches) * 100 if initial_matches > 0 else 0
