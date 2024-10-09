@@ -195,57 +195,57 @@ def calculate_summary_stats(filtered_main, indiv_significant, indiv_non_signific
     Returns:
     None
     """
-    # Total number of transcripts with retained introns
+    # Total transcripts with retained introns
     total_retained_introns = len(filtered_main['isoform'].unique())
     logger.info(f"Total transcripts with retained introns: {total_retained_introns}")
     output_file.write(f"Total transcripts with retained introns:\t{total_retained_introns}\n")
 
-    # Initial matches with m6anet modifications
+    # Initial matches with m6A modifications
     matched_in_m6anet = set(indiv_significant['isoform'].unique()).union(set(indiv_non_significant['isoform'].unique()))
     initial_matches = len(matched_in_m6anet)
     logger.info(f"Initial total retained introns matched in m6anet: {initial_matches}")
     output_file.write(f"Initial total retained introns matched in m6anet:\t{initial_matches}\n")
 
-    # Calculate unique counts for passing and failing thresholds
+    # Separate significant and non-significant counts
     passing_threshold = set(indiv_significant['isoform'].unique())
-    failing_threshold = set(indiv_non_significant['isoform'].unique())
-    failing_threshold = failing_threshold - passing_threshold  # Ensure no overlap
+    failing_threshold = set(indiv_non_significant['isoform'].unique()) - passing_threshold  # Ensure no overlap
     
-    # Number passing and failing
     num_passing = len(passing_threshold)
     num_failing = len(failing_threshold)
+    
     logger.info(f"Total retained introns passing modification threshold: {num_passing}")
     logger.info(f"Total retained introns failing modification threshold (subset of matches): {num_failing}")
     output_file.write(f"Total retained introns passing modification threshold:\t{num_passing}\n")
     output_file.write(f"Total retained introns failing modification threshold (subset of matches):\t{num_failing}\n")
 
-    # Calculate percentages
-    perc_retained_in_m6anet = (initial_matches / total_retained_introns) * 100 if total_retained_introns > 0 else 0
-    perc_passing_threshold = (num_passing / initial_matches) * 100 if initial_matches > 0 else 0
-    perc_failing_threshold = (num_failing / initial_matches) * 100 if initial_matches > 0 else 0
+    # Calculate the percentages relative to the total retained introns
+    perc_matched_in_m6anet = (initial_matches / total_retained_introns) * 100 if total_retained_introns > 0 else 0
+    perc_total_passing = (num_passing / total_retained_introns) * 100 if total_retained_introns > 0 else 0
+    perc_total_failing = (num_failing / total_retained_introns) * 100 if total_retained_introns > 0 else 0
     
-    output_file.write(f"Percentage of retained introns identified in m6anet:\t{perc_retained_in_m6anet:.2f}%\n")
-    output_file.write(f"Percentage of reads passing modification threshold:\t{perc_passing_threshold:.2f}%\n")
-    output_file.write(f"Percentage of reads failing modification threshold:\t{perc_failing_threshold:.2f}%\n")
-
-    logger.info(f"Percentage of retained introns identified in m6anet: {perc_retained_in_m6anet:.2f}%")
-    logger.info(f"Percentage of reads passing modification threshold: {perc_passing_threshold:.2f}%")
-    logger.info(f"Percentage of reads failing modification threshold: {perc_failing_threshold:.2f}%")
+    # Write these new percentage calculations to the output file
+    output_file.write(f"Percentage of retained introns identified in m6anet:\t{perc_matched_in_m6anet:.2f}%\n")
+    output_file.write(f"Percentage of total retained introns passing threshold:\t{perc_total_passing:.2f}%\n")
+    output_file.write(f"Percentage of total retained introns failing threshold:\t{perc_total_failing:.2f}%\n")
+    
+    logger.info(f"Percentage of retained introns identified in m6anet: {perc_matched_in_m6anet:.2f}%")
+    logger.info(f"Percentage of total retained introns passing threshold: {perc_total_passing:.2f}%")
+    logger.info(f"Percentage of total retained introns failing threshold: {perc_total_failing:.2f}%")
 
     # Additional debugging details for further verification
     output_file.write("\n### Debugging Details ###\n")
     output_file.write(f"Retained introns matched: {initial_matches}\n")
     output_file.write(f"Retained introns passing threshold: {num_passing}\n")
     output_file.write(f"Retained introns failing threshold: {num_failing}\n")
-    output_file.write(f"Percentage passing threshold: {perc_passing_threshold:.2f}%\n")
-    output_file.write(f"Percentage failing threshold: {perc_failing_threshold:.2f}%\n\n")
+    output_file.write(f"Percentage passing threshold (of total retained introns): {perc_total_passing:.2f}%\n")
+    output_file.write(f"Percentage failing threshold (of total retained introns): {perc_total_failing:.2f}%\n\n")
     
     logger.info("\n### Debugging Details ###")
     logger.info(f"Retained introns matched: {initial_matches}")
     logger.info(f"Retained introns passing threshold: {num_passing}")
     logger.info(f"Retained introns failing threshold: {num_failing}")
-    logger.info(f"Percentage passing threshold: {perc_passing_threshold:.2f}%")
-    logger.info(f"Percentage failing threshold: {perc_failing_threshold:.2f}%\n")
+    logger.info(f"Percentage passing threshold (of total retained introns): {perc_total_passing:.2f}%")
+    logger.info(f"Percentage failing threshold (of total retained introns): {perc_total_failing:.2f}%\n")
 
     logger.info("Summary statistics successfully written to the output file.")
 
