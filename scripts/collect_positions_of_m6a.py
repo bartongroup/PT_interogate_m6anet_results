@@ -50,10 +50,14 @@ def parse_file(file_path, data):
     """
     with open(file_path, mode='r') as file:
         csv_reader = csv.DictReader(file, delimiter='\t')
+        # Dynamically determine if 'position' or 'positions' is in the file
+        # for weird reasons I was getting both names. Maybe an old scripts output?
+        column_name = 'position' if 'position' in csv_reader.fieldnames else 'positions'
+
         for row in csv_reader:
             transcript_id = row['transcript_id']
             exon_number = row['exon_number']
-            position = row['position']
+            position = row[column_name]  # Use the dynamically determined name
             data[transcript_id][exon_number].append(position)
 
 def main():
